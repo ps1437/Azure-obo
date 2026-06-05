@@ -1,0 +1,26 @@
+server:
+  port: 8080
+
+app:
+  cors:
+    allowed-origin: http://localhost:3000
+
+  azure:
+    tenant-id: ID
+    client-id: ID
+    client-secret: ID
+
+    # This must match your Backend API app registration Application ID URI.
+    # Usually: api://<BACKEND_API_CLIENT_ID>
+    audience: API
+
+    # Microsoft Graph scope for OBO call.
+    # Backend app registration must have Microsoft Graph delegated User.Read permission.
+    graph-scope: https://graph.microsoft.com/User.Read
+#
+#spring:
+#  security:
+#    oauth2:
+#      resourceserver:
+#        jwt:
+#          issuer-uri: https://login.microsoftonline.com/ID/v2.0
