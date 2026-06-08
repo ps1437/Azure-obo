@@ -42,3 +42,6 @@ export const msalConfig: Configuration = {
 export const loginRequest = {
   scopes: [`api://${BACKEND_API_CLIENT_ID}/access_as_user`]
 };
+
+
+

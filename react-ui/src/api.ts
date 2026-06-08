@@ -1,24 +1,35 @@
-import axios from "axios";
-import {
-  AccountInfo,
-  InteractionRequiredAuthError,
-  IPublicClientApplication
-} from "@azure/msal-browser";
+import { AccountInfo, IPublicClientApplication, InteractionRequiredAuthError } from "@azure/msal-browser";
 import { loginRequest } from "./authConfig";
 
-const BACKEND_BASE_URL = "http://localhost:8080";
+export const API_BASE_URL = "http://localhost:8080";
 
-export type GraphProfile = {
-  id?: string;
-  displayName?: string;
+export interface GraphProfile {
+  id: string;
+  displayName: string;
+  mail?: string;
+  userPrincipalName?: string;
   givenName?: string;
   surname?: string;
-  userPrincipalName?: string;
-  mail?: string;
   jobTitle?: string;
-  mobilePhone?: string;
   officeLocation?: string;
-};
+  mobilePhone?: string;
+}
+
+export interface AdoStatusResponse {
+  connected: boolean;
+  code?: string;
+  adoEmail?: string;
+  organization?: string;
+}
+
+export interface AdoConnectResponse {
+  authorizationUrl: string;
+}
+
+export interface ApiErrorResponse {
+  code?: string;
+  message?: string;
+}
 
 export async function getBackendAccessToken(
   instance: IPublicClientApplication,
@@ -33,32 +44,110 @@ export async function getBackendAccessToken(
     return result.accessToken;
   } catch (error) {
     if (error instanceof InteractionRequiredAuthError) {
-      await instance.acquireTokenRedirect({
+      const result = await instance.acquireTokenPopup({
         ...loginRequest,
-        account
+        account,
+        prompt: "consent"
       });
 
-      throw new Error("Redirecting for interactive token acquisition.");
+      return result.accessToken;
     }
 
     throw error;
   }
 }
 
+async function parseResponse<T>(response: Response): Promise<T> {
+  const contentType = response.headers.get("content-type") || "";
+
+  if (!contentType.includes("application/json")) {
+    const text = await response.text();
+
+    console.error("Expected JSON but received:", text);
+
+    throw {
+      code: "INVALID_BACKEND_RESPONSE",
+      message:
+        "Backend did not return JSON. Check API URL, backend server, CORS, or proxy configuration."
+    };
+  }
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw data;
+  }
+
+  return data as T;
+}
+
+export async function apiGet<T>(
+  path: string,
+  instance: IPublicClientApplication,
+  account: AccountInfo
+): Promise<T> {
+  const token = await getBackendAccessToken(instance, account);
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json"
+    }
+  });
+
+  return parseResponse<T>(response);
+}
+
+export async function apiDelete<T>(
+  path: string,
+  instance: IPublicClientApplication,
+  account: AccountInfo
+): Promise<T> {
+  const token = await getBackendAccessToken(instance, account);
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json"
+    }
+  });
+
+  return parseResponse<T>(response);
+}
+
 export async function getProfileUsingObo(
   instance: IPublicClientApplication,
   account: AccountInfo
 ): Promise<GraphProfile> {
-  const backendToken = await getBackendAccessToken(instance, account);
+  return apiGet<GraphProfile>("/api/profile/me", instance, account);
+}
 
-  const response = await axios.get<GraphProfile>(
-    `${BACKEND_BASE_URL}/api/profile/me`,
-    {
-      headers: {
-        Authorization: `Bearer ${backendToken}`
-      }
-    }
-  );
+export async function getAdoStatus(
+  instance: IPublicClientApplication,
+  account: AccountInfo
+): Promise<AdoStatusResponse> {
+  return apiGet<AdoStatusResponse>("/api/ado/status", instance, account);
+}
 
-  return response.data;
+export async function startAdoConnect(
+  instance: IPublicClientApplication,
+  account: AccountInfo
+): Promise<AdoConnectResponse> {
+  return apiGet<AdoConnectResponse>("/api/ado/connect", instance, account);
+}
+
+export async function getAdoWorkItems(
+  instance: IPublicClientApplication,
+  account: AccountInfo
+): Promise<any> {
+  return apiGet<any>("/api/ado/workitems", instance, account);
+}
+
+export async function disconnectAdo(
+  instance: IPublicClientApplication,
+  account: AccountInfo
+): Promise<any> {
+  return apiDelete<any>("/api/ado/connection", instance, account);
 }

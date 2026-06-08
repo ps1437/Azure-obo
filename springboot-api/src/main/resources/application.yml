@@ -6,13 +6,13 @@ app:
     allowed-origin: http://localhost:3000
 
   azure:
-    tenant-id: ID
-    client-id: ID
-    client-secret: ID
+    tenant-id: UD
+    client-id: CL_ID
+    client-secret: C_S
 
     # This must match your Backend API app registration Application ID URI.
     # Usually: api://<BACKEND_API_CLIENT_ID>
-    audience: API
+    audience: api://CL_ID
 
     # Microsoft Graph scope for OBO call.
     # Backend app registration must have Microsoft Graph delegated User.Read permission.
@@ -23,4 +23,16 @@ app:
 #    oauth2:
 #      resourceserver:
 #        jwt:
-#          issuer-uri: https://login.microsoftonline.com/ID/v2.0
+#          issuer-uri: https://login.microsoftonline.com/UD/v2.0
+
+
+ado:
+  oauth:
+    tenant-id: UD
+    client-id: CL_ID
+    client-secret: C_S
+    redirect-uri: http://localhost:8080/api/ado/callback
+    frontend-success-url: http://localhost:3000/ado-connected
+    organization: spGlobal
+    project: rating
+    scope: 499b84ac-1321-427f-aa17-267ca6975798/user_impersonation

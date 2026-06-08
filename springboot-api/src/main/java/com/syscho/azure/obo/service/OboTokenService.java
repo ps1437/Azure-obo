@@ -9,6 +9,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import java.util.Map;
 
 @Service
+
 public class OboTokenService {
 
     private final AzureProperties azureProperties;
